@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Αν η Τ.Ν. ήταν εκπαιδευτικός...</title>
+  <style>
+    :root{
+      --bg1:#0c1424;
+      --bg2:#121e34;
+      --bg3:#1d2d45;
+      --ink:#dfeaf7;
+      --cyan:#63f3ff;
+      --book-w: min(450px, 100%);
+      /* Αφού φύγαμε από τα μενού, μπορούμε να δώσουμε περισσότερο ύψος */
+      --book-h: min(92vh, 850px); 
+    }
+
+    *{ box-sizing:border-box; }
+
+    html, body{
+      margin:0;
+      min-height:100%;
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(99,243,255,.10), transparent 55%),
+        radial-gradient(900px 600px at 85% 15%, rgba(99,243,255,.08), transparent 50%),
+        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+      color:var(--ink);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    body{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:12px;
+    }
+
+    .stage{
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+
+    .book-wrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      perspective:2200px;
+      touch-action: pan-y;
+    }
+
+    /* Η συσκευή / "Οθόνη" */
+    .book{
+      position:relative;
+      width:var(--book-w);
+      height:var(--book-h);
+      border-radius:20px;
+      padding:6px;
+      background: linear-gradient(180deg, #112035 0%, #0b1627 100%);
+      border:1px solid rgba(99,243,255,.20);
+      box-shadow:
+        0 20px 50px rgba(0,0,0,.45),
+        0 0 0 1px rgba(99,243,255,.06) inset,
+        0 0 30px rgba(99,243,255,.10);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .page-stack{
+      position:relative;
+      width:100%;
+      height:100%;
+      border-radius:16px;
+      overflow:hidden;
+      background:#000;
+    }
+
+    .page{
+      position:absolute;
+      inset:0;
+      transform-origin:left center;
+      transform-style:preserve-3d;
+      transition: transform .5s cubic-bezier(.2,.8,.3,1), opacity .4s ease;
+      border-radius:16px;
+      will-change: transform, opacity;
+      background: #000;
+    }
+
+    .page.flipped{
+      transform: rotateY(-90deg) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .page-face{
+      position:absolute;
+      inset:0;
+      border-radius:16px;
+      overflow:hidden;
+      backface-visibility:hidden;
+    }
+
+    /* FULL SCREEN IMAGE */
+    .bg-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      z-index: 1;
+      background: #111;
+    }
+
+    /* GRADIENT OVERLAY (σκουραίνει το κάτω μέρος για να διαβάζεται το κείμενο) */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 16px;
+      pointer-events: none; /* Επιτρέπει τα tap να περνάνε στην εικόνα */
+    }
+
+    /* Περιοχή των κειμένων */
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      pointer-events: auto; /* Επιτρέπει scroll αν το κείμενο είναι τεράστιο */
+      max-height: 80%;
+      overflow-y: auto;
+      cursor: default;
+    }
+
+    /* Cover Page Styling */
+    .cover-face {
+      background: linear-gradient(180deg, #f3fbff 0%, #e8f5ff 45%, #eaf1ff 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 2;
+    }
+
+    .cover-title{
+      margin:0 0 15px 0;
+      font-size: clamp(1.6rem, 7vw, 2.2rem);
+      line-height:1.2;
+      color:#12395f;
+      font-weight:800;
+      text-wrap:balance;
+    }
+
+    .cover-line{
+      width:100px;
+      height:4px;
+      border-radius:999px;
+      background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+      margin-bottom: 20px;
+    }
+
+    .cover-name{
+      margin:0 0 5px 0;
+      color:#173f67;
+      font-weight:800;
+      font-size: clamp(1.1rem, 4vw, 1.3rem);
+    }
+
+    .cover-role{
+      margin:0;
+      color:#3f5f80;
+      font-weight:600;
+      line-height:1.35;
+      font-size: clamp(.9rem, 3.5vw, 1rem);
+    }
+
+    /* Κείμενα διαλόγου - Χωρίς φόντο πια */
+    .text-card{
+      line-height:1.45;
+      font-size:1rem;
+      color:#ffffff;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+      padding: 0 4px;
+    }
+
+    .label{
+      display:block;
+      font-weight:800;
+      font-size:.78rem;
+      margin-bottom:4px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    }
+
+    /* Χρωματίζουμε μόνο τους τίτλους για να ξεχωρίζουν */
+    .student .label { color: #63f3ff; } /* Φωτεινό γαλάζιο */
+    .ai .label { color: #8cb4ff; } /* Απαλό μπλε */
+
+    .page-footer{
+      margin-top: 15px;
+      color:rgba(255,255,255,0.4);
+      font-size: 9px;
+      line-height:1.3;
+      text-align:center;
+      text-shadow: none;
+    }
+    
+    .cover-face .page-footer {
+      position: absolute;
+      bottom: 20px;
+      color: #5a7b9c;
+    }
+
+    @media (max-width: 480px){
+      :root{ --book-h: min(94vh, 850px); }
+      .text-card { font-size:.95rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="book-wrap">
+      <div class="book" id="book" role="button" aria-label="Περιοχή αφής">
+        <div class="page-stack" id="pageStack"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FOOTER_TEXT = "Δημιουργία: Παναγιώτης Δόμβρος, Εκπαιδευτικός Αγγλικών & Θεατρολόγος, Διευθυντής του 1ου Γυμνασίου Πυλαίας";
+
+    const entries = [
+      { student: "Σημείωσα λάθος σελίδες στην ατζέντα μου/στο τετράδιο.", ai: "Συμβαίνει να μπερδευτούμε, αλλά είναι δική σου ευθύνη να ελέγχεις αν αυτό που έγραψες βγάζει νόημα πριν φύγεις από την τάξη. Την επόμενη φορά, επιβεβαίωσέ το με μένα." },
+      { student: "Νόμιζα ότι οι ασκήσεις ήταν για την άλλη Πέμπτη και όχι για σήμερα.", ai: "Η οργάνωση του χρόνου είναι μάθημα από μόνη της. Κράτα καλύτερες σημειώσεις στις ημερομηνίες για να μην βρεθείς ξανά προ εκπλήξεως." },
+      { student: "Ο φίλος μου/ο συμμαθητής μου που ρώτησα, μου είπε ότι δεν είχαμε κάτι για σήμερα.", ai: "Ο φίλος σου δεν είναι ο δάσκαλός σου. Όταν έχεις αμφιβολία, καλό είναι να ρωτάς παραπάνω από ένα άτομο ή να ελέγχεις την πλατφόρμα μας." },
+      { student: "Διάβασα πάρα πολλές ώρες, αλλά μόλις είδα το διαγώνισμα έπαθα black-out από το άγχος.", ai: "Το πιστεύω ότι προσπάθησες. Πάρε μερικές βαθιές ανάσες και ξεκίνα από τις ερωτήσεις που σου φαίνονται πιο εύκολες για να ξεκλειδώσει η μνήμη σου." },
+      { student: "Το ήξερα τέλεια χθες το βράδυ, αλλά τώρα τα έχω μπερδέψει όλα στο μυαλό μου.", ai: "Αυτό σημαίνει ότι ίσως το αποστήθισες αντί να το κατανοήσεις. Ας προσπαθήσουμε να το πεις με δικά σου λόγια, χωρίς να κολλάς στις λέξεις του βιβλίου." },
+      { student: "Έγραψα την εργασία, αλλά το αρχείο καταστράφηκε/δεν αποθηκεύτηκε στο USB.", ai: "Η τεχνολογία απαιτεί πάντα ένα Plan B. Στείλε μου ό,τι έχεις διασώσει μέχρι το απόγευμα και την επόμενη φορά χρησιμοποίησε Cloud αποθήκευση." },
+      { student: "Το tablet/laptop μου έκανε update την ώρα που έπρεπε να το στείλω.", ai: "Αυτή είναι μια καλή υπενθύμιση να μην αφήνουμε την υποβολή για το τελευταίο λεπτό. Θα σου δώσω μια μικρή παράταση, αλλά με μειωμένη βαθμολογία συνέπειας." },
+      { student: "Έπεσε το ίντερνετ στο σπίτι και δεν μπορούσα να μπω στην πλατφόρμα να δω τις ασκήσεις.", ai: "Αν συμβεί ξανά, προσπάθησε να ενημερώσεις το σχολείο τηλεφωνικά από νωρίς. Για σήμερα, θα τις κάνεις τώρα στην τάξη όσο οι άλλοι κάνουν επανάληψη." },
+      { student: "Είχαμε κόσμο στο σπίτι και δεν μπορούσα να συγκεντρωθώ.", ai: "Οι κοινωνικές υποχρεώσεις της οικογένειας δεν πρέπει να μπαίνουν εμπόδιο στην πρόοδό σου. Πρέπει να μάθεις να διεκδικείς τον χρόνο και τον χώρο σου για μελέτη." },
+      { student: "Έπρεπε να προσέχω το μικρό μου αδερφάκι γιατί έλειπαν οι γονείς μου.", ai: "Είναι πολύ ώριμο εκ μέρους σου να βοηθάς, αλλά την επόμενη φορά ενημέρωσέ με νωρίτερα ώστε να βρούμε μια λύση για τις εργασίες σου." },
+      { student: "Με προκαλούσε όλη την ώρα κάτω από το θρανίο και κάποια στιγμή δεν άντεξα.", ai: "Καταλαβαίνω τον εκνευρισμό σου, αλλά αν αντιδράς με τον ίδιο τρόπο, γίνεσαι κι εσύ μέρος του προβλήματος. Έπρεπε να το είχες αναφέρει σε μένα εξ αρχής." },
+      { student: "Απλώς απάντησα σε αυτό που μου είπε, δεν άρχισα εγώ τις βρισιές.", ai: "Χρειάζονται δύο για να υπάρξει καβγάς. Το να συνεχίζεις μια κακή συμπεριφορά δεν σε δικαιολογεί." },
+      { student: "Κάναμε πλάκα μεταξύ μας, δεν καταλαβαίνω γιατί θίχτηκε τώρα.", ai: "Η πλάκα σταματά εκεί που αρχίζει η ενόχληση του άλλου. Αν ο φίλος σου θίχτηκε, σημαίνει ότι ξεπέρασες τα όρια." },
+      { student: "Ήταν ένα εσωτερικό αστείο της παρέας, δεν απευθυνόταν σε εσάς.", ai: "Ακόμα κι αν ήταν εσωτερικό αστείο, η ώρα του μαθήματος δεν είναι η κατάλληλη στιγμή για να το μοιραστείτε, καθώς διακόπτετε τη ροή της τάξης." },
+      { student: "Δεν ήξερα ότι απαγορεύεται να σηκωθώ χωρίς άδεια, στο προηγούμενο μάθημα μας άφηναν.", ai: "Κάθε χώρος και κάθε καθηγητής έχει τους δικούς του κανόνες. Στη δική μας τάξη, χρειαζόμαστε ησυχία και σειρά για να δουλέψουμε σωστά." },
+      { student: "Νόμιζα ότι το διάλειμμα είχε ακόμα 2 λεπτά, δεν άκουσα το κουδούνι.", ai: "Το κουδούνι χτύπησε για όλους. Η έγκαιρη προσέλευση δείχνει σεβασμό προς τους συμμαθητές σου που είναι ήδη στις θέσεις τους." },
+      { student: "Όλοι μιλούσαν, γιατί κάνετε παρατήρηση μόνο σε μένα;", ai: "Δεν εξετάζω τι κάνουν οι άλλοι αυτή τη στιγμή, αλλά τη δική σου συμπεριφορά που υπέπεσε στην αντίληψή μου. Ας εστιάσουμε στο να ησυχάσεις εσύ." },
+      { student: "Με ρώτησε ο διπλανός μου κάτι για το μάθημα και του απαντούσα, δεν λέγαμε κάτι άσχετο.", ai: "Ακόμα και για το μάθημα, η συζήτηση την ώρα της παράδοσης αποσπά την προσοχή. Σημείωσε την ερώτηση και κάν’ την σε μένα για να την ακούσουν όλοι." },
+      { student: "Δικαιολογίες για το Κινητό", ai: "Αν θες να δεις την ώρα, υπάρχει το ρολόι της τάξης. Αν είναι ανάγκη να μιλήσεις με τη μητέρα σου, μπορείς να ζητήσεις άδεια να βγεις έξω για ένα λεπτό. Τώρα, το κινητό στην τσάντα." },
+      { student: "Δικαιολογίες για το Φαγητό", ai: "Καταλαβαίνω ότι πεινάς, αλλά η τάξη δεν είναι εστιατόριο. Φάε γρήγορα δύο μπουκιές έξω στο διάδρομο και μπες μέσα για να συνεχίσουμε." },
+      { student: "Δικαιολογίες για τα Ρούχα", ai: "Δέχομαι ότι μπορεί να υπήρξε ατυχία με το πλυντήριο σήμερα, αλλά φρόντισε από αύριο να τηρείς τον κώδικα εμφάνισης του σχολείου." },
+      { student: "Έχω έναν τρομερό πονοκέφαλο/πονόκοιλο...", ai: "Λυπάμαι που πονάς. Θέλεις να πας μέχρι τη βρύση να ρίξεις λίγο νερό στο πρόσωπό σου ή να ενημερώσουμε τη γραμματεία να πάρει τους γονείς σου;" },
+      { student: "Δεν κοιμήθηκα καθόλου το βράδυ γιατί δεν ένιωθα καλά.", ai: "Η έλλειψη ύπνου κάνει τα πάντα πιο δύσκολα. Προσπάθησε να παρακολουθήσεις όσο μπορείς και το απόγευμα ξεκουράσου για να αναπληρώσεις." },
+      { student: "Είμαι πολύ πιεσμένος ψυχολογικά τελευταία και ξεχνάω πράγματα.", ai: "Σε ευχαριστώ που μοιράζεσαι πώς νιώθεις. Η ψυχική υγεία είναι πάνω από τους βαθμούς. Θέλεις να κάτσουμε μετά το μάθημα να δούμε πώς μπορώ να σε βοηθήσω με τις προθεσμίες;" }
+    ];
+
+    const totalImages = 24; 
+    const totalPages = 1 + totalImages; 
+    let currentIndex = 0; 
+    
+    const pageStack = document.getElementById("pageStack");
+    const book = document.getElementById("book");
+
+    const esc = (s="") => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    function createCoverPage(){
+      const page = document.createElement("div");
+      page.className = "page";
+
+      page.innerHTML = `
+        <div class="page-face cover-face">
+          <h1 class="cover-title">Αν η Τ.Ν. ήταν εκπαιδευτικός...</h1>
+          <div class="cover-line"></div>
+          <p class="cover-name">Παναγιώτης Δόμβρος</p>
+          <p class="cover-role">Εκπαιδευτικός Αγγλικών &amp; Θεατρολόγος</p>
+          <div class="page-footer">${FOOTER_TEXT}</div>
+        </div>
+      `;
+      return page;
+    }
+
+    function createContentPage(n){
+      const item = entries[n - 1] || {student:"", ai:""};
+      const page = document.createElement("div");
+      page.className = "page";
+
+      page.innerHTML = `
+        <div class="page-face">
+          <img src="${n}.png" alt="Εικόνα ${n}" class="bg-img" loading="lazy" onerror="this.style.display='none'">
+          <div class="overlay">
+            <div class="content-area">
+              <div class="text-card student">
+                <span class="label">Μαθητής/τρια</span>
+                ${esc(item.student)}
+              </div>
+              <div class="text-card ai">
+                <span class="label">Τ.Ν.</span>
+                ${esc(item.ai)}
+              </div>
+            </div>
+            <div class="page-footer">${FOOTER_TEXT}</div>
+          </div>
+        </div>
+      `;
+      return page;
+    }
+
+    function buildBook(){
+      pageStack.innerHTML = "";
+      const pages = [createCoverPage()];
+      for(let i=1; i<=totalImages; i++) pages.push(createContentPage(i));
+
+      pages.forEach((p, i) => {
+        p.dataset.index = i;
+        pageStack.appendChild(p);
+      });
+      return pages;
+    }
+
+    const pages = buildBook();
+
+    function renderBook(){
+      pages.forEach((page, i) => {
+        const flipped = i < currentIndex;
+        page.classList.toggle("flipped", flipped);
+        page.style.zIndex = flipped ? String(i + 1) : String((pages.length - i) + 20);
+      });
+    }
+
+    function nextPage(){
+      if(currentIndex < pages.length - 1){
+        currentIndex++;
+        renderBook();
+      } else {
+        // Αν είμαστε στην τελευταία σελίδα, γυρνάμε στο εξώφυλλο
+        currentIndex = 0;
+        renderBook();
+      }
+    }
+
+    function prevPage(){
+      if(currentIndex > 0){
+        currentIndex--;
+        renderBook();
+      }
+    }
+
+    // Αλλαγή σελίδας με κλικ/tap κατευθείαν πάνω στην εικόνα
+    book.addEventListener("click", (e) => {
+      // Αν ο χρήστης έκανε κλικ πάνω στα κείμενα (π.χ. για scroll), αγνόησέ το
+      if(e.target.closest('.content-area')) return;
+
+      const rect = book.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+
+      // Αν το tap έγινε στο αριστερό μισό -> Πίσω, αλλιώς -> Μπροστά
+      if(clickX < rect.width / 2) {
+        prevPage();
+      } else {
+        nextPage();
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") nextPage();
+      if (e.key === "ArrowLeft") prevPage();
+      if (e.key === "Home") {
+        currentIndex = 0;
+        renderBook();
+      }
+    });
+
+    renderBook();
+  </script>
+</body>
+</html>
